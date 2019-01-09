@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset=utf-8 />
+  <title>Lab 09 MUP223</title>
+  <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.4/dist/leaflet.css" />
+  <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: whitesmoke;
+      font-family: Lato, sans-serif;
+      color: #0D0000;
+    }
+
+    header {
+      width: 80%;
+      margin: 10px auto 10px auto;
+    }
+
+    h1 {
+      display: inline-block;
+      margin-right: 20px;
+      color: #001323;
+    }
+
+    h2 {
+      display: inline-block;
+      color: #001323;
+    }
+
+    #map {
+      width: 100%;
+      /* height: 540px; */
+      /* margin: 10px 10%; */
+      /* background: whitesmoke;
+      border: 2px solid #dddedf; */
+      position: absolute;
+      top: 0;
+      bottom: 0;
+    }
+
+    footer {
+      padding: 6px 10%;
+      width: 80%;
+    }
+
+    p {
+      font-size: 1em;
+      color: #001323;
+    }
+
+    .legend {
+      padding: 6px 8px;
+      font-size: 1em;
+      /* Use transparency to blend elements. */
+      border: 2px solid rgba(244, 244, 244, 0.2);
+      background: rgba(100, 100, 100, 0.9);
+      color: rgba(244, 244, 244, 0.8);
+      border-radius: 5px;
+    }
+
+    .legend h3 {
+      font-size: 1.1em;
+      font-weight: bolder;
+      color: #ddd;
+      /* Light */
+      margin: 0 0 10px 0;
+    }
+
+    .legend span {
+      width: 20px;
+      height: 20px;
+      float: left;
+      margin: 0 10px 4px 0;
+    }
+
+    .legend label {
+      font-size: 1.1em;
+    }
+
+    .leaflet-bar a {
+      /* Override the default style for Leaflet's zoom  */
+      background: rgba(100, 100, 100, 0.9);
+      color: rgba(244, 244, 244, 0.8);
+    }
+
+    .legend label:after {
+      content: '';
+      display: block;
+      clear: both;
+    }
+
+    #info-button {
+      padding: 8px 5px;
+      font-size: 0.9em;
+      font-weight: bolder;
+      /* Style matches Leaflet controls */
+      border: 2px solid rgba(244, 244, 244, 0.2);
+      background: rgba(100, 100, 100, 0.9);
+      color: rgba(244, 244, 244, 0.8);
+      border-radius: 5px;
+      /* Position is fixed next to the zoom bar */
+      position: fixed;
+      top: 11px;
+      right: 52px;
+      /* Draw it on top of all elements */
+      z-index: 9999;
+      /* Cursor change on hover -- doesn't work on touch screensn */
+      cursor: pointer;
+    }
+
+    #footer {
+      width: 100%;
+      background: rgba(244, 244, 244, 0.8);
+      color: rgba(20, 20, 20, 0.8);
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+      height: 0px;
+      padding: 0px;
+      /* display below the button to allow clicking if overlay covers screen */
+      z-index: 9000;
+      position: absolute;
+      /*
+        Hide the footer be default. This should not contain too much information. Like to a new page for extended content.
+        */
+      bottom: -10px;
+      /* If too much is included, enable scroll */
+      overflow: scroll;
+    }
+
+    /* #footer div {
+      padding: 10px;
+    } */
+
+    #footer h1 {
+      font-size: 1.3em;
+      margin: 0 0 5px 0;
+    }
+
+    .footer-img {
+      float: right;
+      height: 10vh;
+      margin: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Map Title</h1>
+    <h2>Map Subtitle</h2>
+  </header>
+
+  <div id='map'></div>
+  <button id="info-button" onclick="myInfo()">Information</button>
+  <div id='footer'>
+    <div><img src="https://uky-gis.github.io/graphics/logo-color-400px.png" class="footer-img">
+        <h1>Average Rent in Every US County</h1>
+        Data obtained through the American Fact Finder (<a href="http://factfinder.census.gov/" rel="noopener noreferrer" target="_blank">factfinder.census.gov</a>);
+        2010 Census, SF1 joined to Census Cartographic Boundary Shapefiles (<a href="https://www.census.gov/geo/maps-data/data/cbf/cbf_counties.html" rel="noopener noreferrer" target="_blank">www.census.gov/geography</a>) using QGIS.
+        Map created by <a href="https://github.com/mup223" rel="noopener noreferrer" target="_blank">Matthew Upchurch</a>, Fall 2018.
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.3.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/simple-statistics@6.1.1/dist/simple-statistics.min.js"></script>
+
+  <script>
+    // MAKE AN AWESOME WEB MAP!
+    var options = {
+      center: [39.8283459, -98.5794797],
+      zoom: 4,
+      zoomSnap: .1,
+      zoomControl: false
+    };
+    var map = L.map('map', options);
+    // Get basemap URL from Leaflet Providers
+    var basemap_url = 'http://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'
+    // Get basemap attributes from Leaflet Providers
+    var basemap_attributes = {
+      attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="http://cartodb.com/attributions">CartoDB</a>',
+      subdomains: 'abcd',
+      maxZoom: 19
+    };
+    // requests some map tiles
+    var tiles = L.tileLayer(basemap_url, basemap_attributes);
+    map.addLayer(tiles);
+    var attributeValue = 'RENT';
+    $.getJSON('data/counties_median_rent_2015.json', function(data) {
+      var dataLayer = L.geoJson(data, {
+        style: function(feature) {
+          return {
+            color: '#444',
+            weight: 1,
+            fillOpacity: 1,
+            fillColor: '#1f78b4'
+          };
+        },
+        onEachFeature: function(feature, layer) {
+          //console.log(layer.feature.properties.RENT)
+          layer.on('mouseover', function() {
+            layer.bindPopup('<p>' + layer.feature.properties.NAME + '</p>' +
+              '<p> $ ' + layer.feature.properties.RENT + '</p>').openPopup();
+          });
+          layer.on('mouseout', function() {
+            layer.closePopup();
+          })
+        }
+      }).addTo(map);
+      drawMap(dataLayer);
+    });
+
+    $.getJSON('data/us_states_20m.geojson', function(data) {
+      var dataLayer = L.geoJson(data, {
+        style: function(feature) {
+          return {
+            color: '#444',
+            weight: 2,
+            fillOpacity: 0,
+            interactive: false
+          };
+        }
+      }).addTo(map);
+    });
+
+    function drawMap(dataLayer) {
+      var breaks = getClassBreaks(dataLayer);
+      dataLayer.eachLayer(function(layer) {
+        var props = layer.feature.properties;
+        layer.setStyle({
+          fillColor: getColor(props[attributeValue], breaks)
+        });
+      });
+      //console.log(breaks);
+      drawLegend(breaks);
+    };
+    test_array = []; //used to sort values to see if the were sorted correctly has integers
+
+    function getColor(d, breaks) {
+      //console.log(parseInt(breaks[0][1], 10)); //realized the reason these comparisons weren't symbolizing right is because they were being read a strings and not int
+      if (parseInt(d, 10) <= parseInt(breaks[0][1], 10)) {
+        // test_array.push(parseInt(d,10))
+        // console.log(test_array.sort())
+        return '#f1eef6';
+      } else if (parseInt(d, 10) <= parseInt(breaks[1][1], 10)) {
+        return '#bdc9e1';
+      } else if (parseInt(d, 10) <= parseInt(breaks[2][1], 10)) {
+        return '#74a9cf';
+      } else if (parseInt(d, 10) <= parseInt(breaks[3][1], 10)) {
+        return '#2b8cbe';
+      } else if (parseInt(d, 10) <= parseInt(breaks[4][1], 10)) {
+        return '#045a8d';
+      } else if (d === null) { //trying to figure out why the values with 4 digits are not being symbolized
+        return '#f1eef6'
+      }
+      //console.log(breaks)
+    };
+
+    function getClassBreaks(dataLayer) {
+      var values = [];
+      dataLayer.eachLayer(function(layer) {
+        var props = layer.feature.properties;
+        var value = props[attributeValue];
+        values.push(value);
+        //console.log(layer)
+      });
+      //console.log(values);
+      var clusters = ss.ckmeans(values, 5)
+      var breaks = clusters.map(function(cluster) {
+        return [cluster[0], cluster.pop()]
+      });
+      return breaks;
+    };
+
+    function drawLegend(breaks) {
+      //console.log(breaks);
+      var legend = L.control({
+        position: 'topleft'
+      });
+      legend.onAdd = function() {
+        var div = L.DomUtil.create('div', 'legend');
+        div.innerHTML = '<h3>' + attributeValue + '</h3>';
+        for (var i = 0; i < breaks.length; i++) {
+          var color = getColor(breaks[i][0], breaks);
+          if (breaks[i][0] == null) {
+            div.innerHTML +=
+              '<span style="background: ' + color + '"></span> ' +
+              '<label> 0 - ' + breaks[i][1] + '</label>';
+          } else {
+            div.innerHTML +=
+              '<span style="background: ' + color + '"></span> ' +
+              '<label>' + breaks[i][0] + ' - ' + breaks[i][1] + '</label>';
+          }
+        }
+        return div;
+      };
+      legend.addTo(map);
+    };
+    map.addControl(L.control.zoom({
+      position: 'topright'
+    }));
+
+    var clicked = false;
+    function myInfo() {
+      var y = document.getElementById('info-button');
+      if (clicked === true) {
+        y.style.background = 'rgba(100, 100, 100, 0.9)';
+        clicked = false
+      } else {
+        y.style.background = 'rgba(146, 239, 146, 0.8)';
+        clicked = true
+      }
+      var x = document.getElementById('footer');
+      if (x.style.height === '20vh') {
+        x.style.height = '0px';
+      } else {
+        x.style.height = '20vh'
+      }
+    };
+  </script>
+
+</body>
+
+</html>
