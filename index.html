@@ -67,6 +67,28 @@
       color: #001323;
     }
 
+    @media screen and (max-height: 800px) {
+
+      #map {
+        height: 65vh;
+      }
+
+    }
+
+    @media screen and (max-height: 500px) {
+
+      #map {
+        height: 50vh;
+      }
+
+    }
+
+    @media screen and (max-height: 350px) {
+
+      #map {
+        height: 100vh;
+      }
+
   </style>
 </head>
 
@@ -89,7 +111,7 @@
     // MAKE AN AWESOME WEB MAP!
     var options = {
       center: [33.83333333, -80.86666667],
-      zoom: 8,
+      zoom: 7,
       zoomControl: false
     }
 
